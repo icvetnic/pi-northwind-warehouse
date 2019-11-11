@@ -57,6 +57,10 @@ INSERT INTO NorthWindCvetnicSP.dbo.dCustomers
 			ON cust.CityID = city.CityID
 GO
 
+--specijalni zapis ako Customer ne postoji (CompanyName postavljamo na 'nepoznato')
+INSERT INTO NorthWindCvetnicSP.dbo.dCustomers(CompanyName) VALUES ('nepozanto')
+GO
+
 INSERT INTO NorthWindCvetnicSP.dbo.dShippers
 	(
 	ShipperID,
@@ -70,6 +74,9 @@ INSERT INTO NorthWindCvetnicSP.dbo.dShippers
 		FROM NorthWind2015.dbo.Shippers 
 GO
 
+--specijalni zapis ako Shipper ne postoji (CompanyName postavljamo na 'nepoznato')
+INSERT INTO NorthWindCvetnicSP.dbo.dShippers(ShipperID, CompanyName) VALUES (1000000, 'nepozanto')
+GO
 
 INSERT INTO NorthWindCvetnicSP.dbo.dShips
 	(
@@ -134,7 +141,39 @@ UPDATE NorthWindCvetnicSP.dbo.dPaymentMethod
 		FROM NorthWind2015.dbo.Employees
 GO
 
+--specijalni zapis ako Emplyee ne postoji (FirstName postavljamo na 'nepoznato')
+INSERT INTO NorthWindCvetnicSP.dbo.dEmployees(EmployeeID, LastName, FirstName) VALUES (1000000, 'nepozanto', 'nepozanto')
+GO
+
+/*
+--------------------------------------------
+PUNJENJE ÈINJENIÈNE TABLICE cOrders
+--------------------------------------------
+*/
+
+--pomoæne varijable
 DECLARE @nepoznato_vrijeme INT = DATEDIFF(ss, '00:00:00', '23:59:59') + 1
+
+DECLARE @CustomerID_nepoznato INT =
+		(
+		SELECT TOP 1 CustomerID
+		FROM  NorthWindCvetnicSP.dbo.dCustomers AS c
+		WHERE c.CompanyName = 'nepoznato'
+		)
+
+DECLARE @ShipID_nepoznato INT =
+		(
+		SELECT TOP 1 ShipID 
+		FROM  NorthWindCvetnicSP.dbo.dShips AS ships
+		WHERE ships.ShipName = 'nepoznato'
+		)
+
+DECLARE @PaymentMethodID_nepoznato INT =
+		(
+			SELECT TOP 1 PaymentMethodID 
+				FROM  NorthWindCvetnicSP.dbo.dPaymentMethod AS method
+				WHERE method.Description = 'nepoznato'
+		)
 
  INSERT INTO NorthWindCvetnicSP.dbo.cOrders
 	(
@@ -154,14 +193,9 @@ DECLARE @nepoznato_vrijeme INT = DATEDIFF(ss, '00:00:00', '23:59:59') + 1
 	)
 	SELECT	
 		OrderID,
-		(
-		SELECT TOP 1 CustomerID 
-			FROM  NorthWindCvetnicSP.dbo.dCustomers AS cust
-			WHERE cust.CustomerIDDB = orders.CustomerID
-		)
-		,
-		EmployeeID,
-		ShipVia,
+		IIF(orders.CustomerID IS NOT NULL, customers.CustomerID, @CustomerID_nepoznato),
+		IIF(orders.EmployeeID IS NOT NULL, employees.EmployeeID, 1000000),
+		IIF(orders.ShipVia IS NOT NULL, shippers.ShipperID, 1000000),
 		IIF(
 			orders.ShipName IS NOT NULL,
 			(
@@ -171,25 +205,13 @@ DECLARE @nepoznato_vrijeme INT = DATEDIFF(ss, '00:00:00', '23:59:59') + 1
 					AND (ships.ShipAddress = orders.ShipAddress OR (ships.ShipAddress IS NULL AND orders.ShipAddress IS NULL))
 					AND (ships.ShipCityId = orders.ShipCityId OR (ships.ShipCityId IS NULL AND orders.ShipCityId IS NULL))
 			),
-			(
-			SELECT TOP 1 ShipID 
-				FROM  NorthWindCvetnicSP.dbo.dShips AS ships
-				WHERE ships.ShipName = 'nepoznato'
-			)
+			@ShipID_nepoznato
 		)
 		,
 		IIF(
 			orders.PaymentMethod IS NOT NULL,
-			(
-			SELECT TOP 1 PaymentMethodID 
-				FROM  NorthWindCvetnicSP.dbo.dPaymentMethod AS method
-				WHERE method.Description = orders.PaymentMethod
-			),
-			(
-			SELECT TOP 1 PaymentMethodID 
-				FROM  NorthWindCvetnicSP.dbo.dPaymentMethod AS method
-				WHERE method.Description = 'nepoznato'
-			)
+			pmethod.PaymentMethodID,
+			@PaymentMethodID_nepoznato
 		)
 		,
 		--Pretvori SMALLDATETIME u DATE, zatim pretvori u format 'yyyymmdd', na kraju pretvori u INT
@@ -204,6 +226,12 @@ DECLARE @nepoznato_vrijeme INT = DATEDIFF(ss, '00:00:00', '23:59:59') + 1
 		FROM NorthWind2015.dbo.Orders AS orders
 			 LEFT JOIN NorthWindCvetnicSP.dbo.dCustomers AS customers
 				ON orders.CustomerID = customers.CustomerIDDB
+			 LEFT JOIN NorthWindCvetnicSP.dbo.dPaymentMethod AS pmethod
+				ON orders.PaymentMethod = pmethod.Description
+			 LEFT JOIN NorthWindCvetnicSP.dbo.dEmployees AS employees
+				ON orders.EmployeeID = employees.EmployeeID
+			 LEFT JOIN NorthWindCvetnicSP.dbo.dShippers AS shippers
+				ON orders.ShipVia = shippers.ShipperID
 GO
 
 
@@ -216,38 +244,45 @@ INSERT INTO NorthWindCvetnicSP.dbo.dProducts
 	(
 	PruductID,
 	ProductName,
-	SupplierID,
-	SupplierCompanyName,
-	SupplierContactName,
-	SupplierContactTitle,
-	SupplierAddress,
-	SupplierCityID,
-	SupplierPhone,
-	SupplierFax,
 	CategoryID,
 	CategoryName
 	)
 	SELECT 
 		ProductID,
 		ProductName,
-		prod.SupplierID,
-		supp.CompanyName,
-		supp.ContactName,
-		supp.ContactTitle,
-		supp.Address,
-		supp.CityID,
-		supp.Phone,
-		supp.Fax,
 		prod.CategoryID,
 		CategoryName
 		FROM NorthWind2015.dbo.Products AS prod
 			 LEFT JOIN
 			 NorthWind2015.dbo.Categories AS cat
 				ON prod.CategoryID = cat.CategoryID
-			 LEFT JOIN
-			 NorthWind2015.dbo.Suppliers AS supp
-				ON prod.SupplierID = supp.SupplierID
 GO
+
+INSERT INTO NorthWindCvetnicSP.dbo.dSuppliers
+	(
+	SupplierID,
+	CompanyName,
+	ContactName,
+	ContactTitle,
+	Address,
+	CityID,
+	Phone,
+	Fax
+	)
+	SELECT 
+		SupplierID,
+		CompanyName,
+		ContactName,
+		ContactTitle,
+		Address,
+		CityID,
+		Phone,
+		Fax
+		FROM NorthWind2015.dbo.Suppliers
+GO
+
+--specijalni zapis ako Supplier ne postoji (CompanyName postavljamo na 'nepoznato')
+INSERT INTO NorthWindCvetnicSP.dbo.dSuppliers (SupplierID, CompanyName) VALUES (1000000, 'nepozanto')
 
  INSERT INTO NorthWindCvetnicSP.dbo.dDiscounts (DiscountDesc)
 	SELECT DISTINCT	
@@ -305,6 +340,7 @@ DECLARE @discountID_nepoznato INT =
 	ShippedDateKey,
 	ShippedTimeKey,
 
+	SupplierID,
 	DiscountKey, 
 
 	UnitPrice,
@@ -313,7 +349,7 @@ DECLARE @discountID_nepoznato INT =
 	)
 	SELECT	
 		orderItems.OrderID,
-		ProductID,
+		orderItems.ProductID,
 		CustomerID,
 		EmployeeID,
 		ShipVia,
@@ -325,6 +361,8 @@ DECLARE @discountID_nepoznato INT =
 		RequiredTimeKey,
 		ShippedDateKey,
 		ShippedTimeKey,
+		IIF(products.SupplierID IS NOT NULL, suppliers.SupplierID, 1000000)
+		,
 		(
 		CASE
 			WHEN orderItems.DiscountDesc IS NULL AND orderItems.Discount > 0
@@ -334,7 +372,7 @@ DECLARE @discountID_nepoznato INT =
 			ELSE disc.DiscountID
 		END
 		),
-		UnitPrice,
+		orderItems.UnitPrice,
 		Quantity,
 		Discount
 		FROM NorthWind2015.dbo.OrderItems AS orderItems
@@ -342,4 +380,8 @@ DECLARE @discountID_nepoznato INT =
 				ON orderItems.OrderID = orders.OrderID
 			 LEFT JOIN NorthWindCvetnicSP.dbo.dDiscounts AS disc
 				ON orderItems.DiscountDesc = disc.DiscountDesc
+			 LEFT JOIN NorthWind2015.dbo.Products AS products
+				ON orderItems.ProductID = products.ProductID
+			 LEFT JOIN NorthWindCvetnicSP.dbo.dSuppliers AS suppliers
+				ON products.SupplierID = suppliers.SupplierID
 GO

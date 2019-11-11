@@ -6,6 +6,7 @@ DROP TABLE dbo.cOrders
 DROP TABLE dbo.cOrderItems
 DROP TABLE dbo.dProducts
 DROP TABLE dbo.dDiscounts
+DROP TABLE dbo.dSuppliers
 DROP TABLE dbo.dCustomers
 DROP TABLE dbo.dShippers
 DROP TABLE dbo.dShips
@@ -106,16 +107,21 @@ CREATE TABLE dbo.dProducts
 	(
 	PruductID INT PRIMARY KEY,
 	ProductName NVARCHAR(40) NOT NULL,
-	SupplierID INT,
-	SupplierCompanyName NVARCHAR(40) NOT NULL,
-	SupplierContactName NVARCHAR(30),
-	SupplierContactTitle NVARCHAR(30),
-	SupplierAddress NVARCHAR(60),
-	SupplierCityID INT,
-	SupplierPhone NVARCHAR(24),
-	SupplierFax NVARCHAR(24),
 	CategoryID INT,
 	CategoryName NVARCHAR(15)
+	)
+GO
+
+CREATE TABLE dbo.dSuppliers
+	(
+	SupplierID INT PRIMARY KEY,
+	CompanyName NVARCHAR(40) NOT NULL,
+	ContactName NVARCHAR(30),
+	ContactTitle NVARCHAR(30),
+	Address NVARCHAR(60),
+	CityID INT,
+	Phone NVARCHAR(24),
+	Fax NVARCHAR(24),
 	)
 GO
 
@@ -144,6 +150,7 @@ CREATE TABLE dbo.cOrderItems
 	ShippedDateKey INT,
 	ShippedTimeKey INT,
 
+	SupplierID INT,
 	DiscountKey INT,
 
 	UnitPrice MONEY NOT NULL,
@@ -163,6 +170,7 @@ CREATE TABLE dbo.cOrderItems
 	CONSTRAINT FK_cOrderItemes_RequiredTimeKey FOREIGN KEY (RequiredTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan),
 	CONSTRAINT FK_cOrderItemes_ShippedDateKey FOREIGN KEY (ShippedDateKey) REFERENCES  dbo.dDatum (sifDatum),
 	CONSTRAINT FK_cOrderItemes_ShippedTimeKey FOREIGN KEY (ShippedTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan),
+	CONSTRAINT FK_cOrderItemes_SupplierID FOREIGN KEY (SupplierID) REFERENCES  dbo.dSuppliers (SupplierID),
 	CONSTRAINT FK_cOrderItemes_DiscountKey FOREIGN KEY (DiscountKey) REFERENCES  dbo.dDiscounts (DiscountID)
 	)
 GO
