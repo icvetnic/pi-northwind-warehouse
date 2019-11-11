@@ -3,7 +3,9 @@ GO
 
 --prvo obriši tablicu koja ima FK-jeve
 DROP TABLE dbo.cOrders
-
+DROP TABLE dbo.cOrderItems
+DROP TABLE dbo.dProducts
+DROP TABLE dbo.dDiscounts
 DROP TABLE dbo.dCustomers
 DROP TABLE dbo.dShippers
 DROP TABLE dbo.dShips
@@ -85,18 +87,82 @@ CREATE TABLE dbo.cOrders
 
 	Freight MONEY,
 
-	CONSTRAINT FK_CustomerID FOREIGN KEY (CustomerID) REFERENCES  dbo.dCustomers (CustomerID),
-	CONSTRAINT FK_EmployeeID FOREIGN KEY (EmployeeID) REFERENCES  dbo.dEmployees (EmployeeID),
-	CONSTRAINT FK_ShipperID FOREIGN KEY (ShipVia) REFERENCES  dbo.dShippers (ShipperID),
-	CONSTRAINT FK_ShipID FOREIGN KEY (ShipID) REFERENCES  dbo.dShips (ShipID),
-	CONSTRAINT FK_PaymentMethodKey FOREIGN KEY (PaymentMethodKey) REFERENCES  dbo.dPaymentMethod (PaymentMethodID),
-	CONSTRAINT FK_OrderDateKey FOREIGN KEY (OrderDateKey) REFERENCES  dbo.dDatum (sifDatum),
-	CONSTRAINT FK_OrderTimeKey FOREIGN KEY (OrderTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan),
-	CONSTRAINT FK_RequiredDateKey FOREIGN KEY (RequiredDateKey) REFERENCES  dbo.dDatum (sifDatum),
-	CONSTRAINT FK_RequiredTimeKey FOREIGN KEY (RequiredTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan),
-	CONSTRAINT FK_ShippedDateKey FOREIGN KEY (ShippedDateKey) REFERENCES  dbo.dDatum (sifDatum),
-	CONSTRAINT FK_ShippedTimeKey FOREIGN KEY (ShippedTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan)
+	CONSTRAINT FK_cOrders_CustomerID FOREIGN KEY (CustomerID) REFERENCES  dbo.dCustomers (CustomerID),
+	CONSTRAINT FK_cOrders_EmployeeID FOREIGN KEY (EmployeeID) REFERENCES  dbo.dEmployees (EmployeeID),
+	CONSTRAINT FK_cOrders_ShipperID FOREIGN KEY (ShipVia) REFERENCES  dbo.dShippers (ShipperID),
+	CONSTRAINT FK_cOrders_ShipID FOREIGN KEY (ShipID) REFERENCES  dbo.dShips (ShipID),
+	CONSTRAINT FK_cOrders_PaymentMethodKey FOREIGN KEY (PaymentMethodKey) REFERENCES  dbo.dPaymentMethod (PaymentMethodID),
+	CONSTRAINT FK_cOrders_OrderDateKey FOREIGN KEY (OrderDateKey) REFERENCES  dbo.dDatum (sifDatum),
+	CONSTRAINT FK_cOrders_OrderTimeKey FOREIGN KEY (OrderTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan),
+	CONSTRAINT FK_cOrders_RequiredDateKey FOREIGN KEY (RequiredDateKey) REFERENCES  dbo.dDatum (sifDatum),
+	CONSTRAINT FK_cOrders_RequiredTimeKey FOREIGN KEY (RequiredTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan),
+	CONSTRAINT FK_cOrders_ShippedDateKey FOREIGN KEY (ShippedDateKey) REFERENCES  dbo.dDatum (sifDatum),
+	CONSTRAINT FK_cOrders_ShippedTimeKey FOREIGN KEY (ShippedTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan)
 	)
 
 GO
 
+CREATE TABLE dbo.dProducts
+	(
+	PruductID INT PRIMARY KEY,
+	ProductName NVARCHAR(40) NOT NULL,
+	SupplierID INT,
+	SupplierCompanyName NVARCHAR(40) NOT NULL,
+	SupplierContactName NVARCHAR(30),
+	SupplierContactTitle NVARCHAR(30),
+	SupplierAddress NVARCHAR(60),
+	SupplierCityID INT,
+	SupplierPhone NVARCHAR(24),
+	SupplierFax NVARCHAR(24),
+	CategoryID INT,
+	CategoryName NVARCHAR(15)
+	)
+GO
+
+CREATE TABLE dbo.dDiscounts
+	(
+	DiscountID INT PRIMARY KEY IDENTITY,
+	DiscountDesc NCHAR(30)
+	)
+
+CREATE TABLE dbo.cOrderItems
+	(
+	--primary key
+	OrderID INT NOT NULL,
+	PruductID INT NOT NULL,
+
+	--dimensions from cOrders
+	CustomerID INT,
+	EmployeeID INT,
+	ShipVia INT,
+	ShipID INT,
+	PaymentMethodKey INT,
+	OrderDateKey INT,
+	OrderTimeKey INT,
+	RequiredDateKey INT,
+	RequiredTimeKey INT,
+	ShippedDateKey INT,
+	ShippedTimeKey INT,
+
+	DiscountKey INT,
+
+	UnitPrice MONEY NOT NULL,
+	Quantity SMALLINT NOT NULL,
+	Discount REAL NOT NULL,
+	
+	CONSTRAINT PK_OrderItems PRIMARY KEY (OrderID, PruductID),
+	CONSTRAINT FK_cOrderItemes_PruductID FOREIGN KEY (PruductID) REFERENCES  dbo.dProducts (PruductID),
+	CONSTRAINT FK_cOrderItemes_CustomerID FOREIGN KEY (CustomerID) REFERENCES  dbo.dCustomers (CustomerID),
+	CONSTRAINT FK_cOrderItemes_EmployeeID FOREIGN KEY (EmployeeID) REFERENCES  dbo.dEmployees (EmployeeID),
+	CONSTRAINT FK_cOrderItemes_ShipperID FOREIGN KEY (ShipVia) REFERENCES  dbo.dShippers (ShipperID),
+	CONSTRAINT FK_cOrderItemes_ShipID FOREIGN KEY (ShipID) REFERENCES  dbo.dShips (ShipID),
+	CONSTRAINT FK_cOrderItemes_PaymentMethodKey FOREIGN KEY (PaymentMethodKey) REFERENCES  dbo.dPaymentMethod (PaymentMethodID),
+	CONSTRAINT FK_cOrderItemes_OrderDateKey FOREIGN KEY (OrderDateKey) REFERENCES  dbo.dDatum (sifDatum),
+	CONSTRAINT FK_cOrderItemes_OrderTimeKey FOREIGN KEY (OrderTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan),
+	CONSTRAINT FK_cOrderItemes_RequiredDateKey FOREIGN KEY (RequiredDateKey) REFERENCES  dbo.dDatum (sifDatum),
+	CONSTRAINT FK_cOrderItemes_RequiredTimeKey FOREIGN KEY (RequiredTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan),
+	CONSTRAINT FK_cOrderItemes_ShippedDateKey FOREIGN KEY (ShippedDateKey) REFERENCES  dbo.dDatum (sifDatum),
+	CONSTRAINT FK_cOrderItemes_ShippedTimeKey FOREIGN KEY (ShippedTimeKey) REFERENCES  dbo.dVrijemedan (sifVrijemeDan),
+	CONSTRAINT FK_cOrderItemes_DiscountKey FOREIGN KEY (DiscountKey) REFERENCES  dbo.dDiscounts (DiscountID)
+	)
+GO

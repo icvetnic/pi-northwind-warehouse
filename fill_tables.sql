@@ -1,13 +1,27 @@
 USE NorthWindCvetnicSP
 GO
 
+/*
+-----------------------------------
+BRISANJE SVIH PODATAKA IZ SKLADIŠTA
+-----------------------------------
+*/
+
 DELETE FROM dbo.cOrders
+DELETE FROM dbo.cOrderItems
+DELETE FROM dbo.dProducts
 DELETE FROM dbo.dCustomers
 DELETE FROM dbo.dShippers
 DELETE FROM dbo.dShips
 DELETE FROM dbo.dPaymentMethod
 DELETE FROM dbo.dEmployees
 
+
+/*
+----------------------------------------
+PUNJENJE DIMENZIJSKIH TABLICA ZA cOrders
+----------------------------------------
+*/
 INSERT INTO NorthWindCvetnicSP.dbo.dCustomers
 	(
 	--CustomerID is generated automaticly (implicit)
@@ -71,6 +85,7 @@ INSERT INTO NorthWindCvetnicSP.dbo.dShips
 			FROM NorthWind2015.dbo.Orders
 GO
 
+--brod bez imena
 UPDATE NorthWindCvetnicSP.dbo.dShips
 	SET ShipName = 'nepoznato'
 	WHERE ShipName IS NULL
@@ -83,6 +98,10 @@ UPDATE NorthWindCvetnicSP.dbo.dShips
 			PaymentMethod
 			FROM NorthWind2015.dbo.Orders
 GO
+
+UPDATE NorthWindCvetnicSP.dbo.dPaymentMethod
+	SET Description = 'nepoznato'
+	WHERE Description IS NULL
 
  INSERT INTO NorthWindCvetnicSP.dbo.dEmployees
 	(
@@ -159,10 +178,18 @@ DECLARE @nepoznato_vrijeme INT = DATEDIFF(ss, '00:00:00', '23:59:59') + 1
 			)
 		)
 		,
-		(
-		SELECT TOP 1 PaymentMethodID 
-			FROM  NorthWindCvetnicSP.dbo.dPaymentMethod AS method
-			WHERE method.Description = orders.PaymentMethod
+		IIF(
+			orders.PaymentMethod IS NOT NULL,
+			(
+			SELECT TOP 1 PaymentMethodID 
+				FROM  NorthWindCvetnicSP.dbo.dPaymentMethod AS method
+				WHERE method.Description = orders.PaymentMethod
+			),
+			(
+			SELECT TOP 1 PaymentMethodID 
+				FROM  NorthWindCvetnicSP.dbo.dPaymentMethod AS method
+				WHERE method.Description = 'nepoznato'
+			)
 		)
 		,
 		--Pretvori SMALLDATETIME u DATE, zatim pretvori u format 'yyyymmdd', na kraju pretvori u INT
@@ -175,5 +202,144 @@ DECLARE @nepoznato_vrijeme INT = DATEDIFF(ss, '00:00:00', '23:59:59') + 1
 		IIF(ShippedDate IS NULL,  @nepoznato_vrijeme, DATEDIFF(ss, 0, CAST(ShippedDate AS TIME(0)))),
 		Freight
 		FROM NorthWind2015.dbo.Orders AS orders
+			 LEFT JOIN NorthWindCvetnicSP.dbo.dCustomers AS customers
+				ON orders.CustomerID = customers.CustomerIDDB
+GO
 
+
+/*
+--------------------------------------------
+PUNJENJE DIMENZIJSKIH TABLICA ZA cOrderItems
+--------------------------------------------
+*/
+INSERT INTO NorthWindCvetnicSP.dbo.dProducts
+	(
+	PruductID,
+	ProductName,
+	SupplierID,
+	SupplierCompanyName,
+	SupplierContactName,
+	SupplierContactTitle,
+	SupplierAddress,
+	SupplierCityID,
+	SupplierPhone,
+	SupplierFax,
+	CategoryID,
+	CategoryName
+	)
+	SELECT 
+		ProductID,
+		ProductName,
+		prod.SupplierID,
+		supp.CompanyName,
+		supp.ContactName,
+		supp.ContactTitle,
+		supp.Address,
+		supp.CityID,
+		supp.Phone,
+		supp.Fax,
+		prod.CategoryID,
+		CategoryName
+		FROM NorthWind2015.dbo.Products AS prod
+			 LEFT JOIN
+			 NorthWind2015.dbo.Categories AS cat
+				ON prod.CategoryID = cat.CategoryID
+			 LEFT JOIN
+			 NorthWind2015.dbo.Suppliers AS supp
+				ON prod.SupplierID = supp.SupplierID
+GO
+
+ INSERT INTO NorthWindCvetnicSP.dbo.dDiscounts (DiscountDesc)
+	SELECT DISTINCT	
+		DiscountDesc
+			FROM NorthWind2015.dbo.OrderItems
+			WHERE DiscountDesc IS NOT NULL
+GO
+
+--Postoje popusti koji nemaju opis
+ INSERT INTO NorthWindCvetnicSP.dbo.dDiscounts (DiscountDesc)
+	VALUES
+		('bez popusta'),
+		('nepoznato')
+GO
+
+/*
+--------------------------------------------
+PUNJENJE ÈINJENIÈNE TABLICE cOrderItems
+--------------------------------------------
+*/
+
+--pomoæne varijable
+DECLARE @nepoznato_vrijeme INT = DATEDIFF(ss, '00:00:00', '23:59:59') + 1
+
+DECLARE @discountID_bez_popusta INT = 
+		(
+		SELECT TOP 1 DiscountID 
+		FROM dDiscounts
+		WHERE DiscountDesc = 'bez popusta'
+		)
+
+DECLARE @discountID_nepoznato INT = 
+		(
+		SELECT TOP 1 DiscountID 
+		FROM dDiscounts
+		WHERE DiscountDesc = 'nepoznato'
+		)
+
+ INSERT INTO NorthWindCvetnicSP.dbo.cOrderItems
+	(
+	--primary key
+	OrderID,
+	PruductID,
+
+	--dimensions from cOrders
+	CustomerID,
+	EmployeeID,
+	ShipVia,
+	ShipID,
+	PaymentMethodKey,
+	OrderDateKey,
+	OrderTimeKey,
+	RequiredDateKey,
+	RequiredTimeKey,
+	ShippedDateKey,
+	ShippedTimeKey,
+
+	DiscountKey, 
+
+	UnitPrice,
+	Quantity,
+	Discount
+	)
+	SELECT	
+		orderItems.OrderID,
+		ProductID,
+		CustomerID,
+		EmployeeID,
+		ShipVia,
+		ShipID,
+		PaymentMethodKey,
+		OrderDateKey,
+		OrderTimeKey,
+		RequiredDateKey,
+		RequiredTimeKey,
+		ShippedDateKey,
+		ShippedTimeKey,
+		(
+		CASE
+			WHEN orderItems.DiscountDesc IS NULL AND orderItems.Discount > 0
+				THEN @discountID_nepoznato
+			WHEN orderItems.DiscountDesc IS NULL AND orderItems.Discount = 0
+				THEN @discountID_bez_popusta
+			ELSE disc.DiscountID
+		END
+		),
+		UnitPrice,
+		Quantity,
+		Discount
+		FROM NorthWind2015.dbo.OrderItems AS orderItems
+			 LEFT JOIN NorthWindCvetnicSP.dbo.cOrders AS orders
+				ON orderItems.OrderID = orders.OrderID
+			 LEFT JOIN NorthWindCvetnicSP.dbo.dDiscounts AS disc
+				ON orderItems.DiscountDesc = disc.DiscountDesc
 GO
