@@ -87,6 +87,11 @@ CREATE TABLE dbo.cOrders
 	ShippedTimeKey INT,
 
 	Freight MONEY,
+	TotalPriceWithDiscount MONEY,
+	TotalPriceWithoutDiscount MONEY,
+	NumOfProducts INT,
+	NumOfDistinctProducts INT,
+	Duration INT, -- in seconds
 
 	CONSTRAINT FK_cOrders_CustomerID FOREIGN KEY (CustomerID) REFERENCES  dbo.dCustomers (CustomerID),
 	CONSTRAINT FK_cOrders_EmployeeID FOREIGN KEY (EmployeeID) REFERENCES  dbo.dEmployees (EmployeeID),
@@ -105,8 +110,12 @@ GO
 
 CREATE TABLE dbo.dProducts
 	(
-	PruductID INT PRIMARY KEY,
+	ProductID INT PRIMARY KEY,
 	ProductName NVARCHAR(40) NOT NULL,
+	CountryOfOrigin NCHAR(25),
+	QuantityPerUnit NVARCHAR(20),
+	UnitPrice MONEY,
+	UnitsInStock SMALLINT,
 	CategoryID INT,
 	CategoryName NVARCHAR(15)
 	)
@@ -135,7 +144,7 @@ CREATE TABLE dbo.cOrderItems
 	(
 	--primary key
 	OrderID INT NOT NULL,
-	PruductID INT NOT NULL,
+	ProductID INT NOT NULL,
 
 	--dimensions from cOrders
 	CustomerID INT,
@@ -157,8 +166,8 @@ CREATE TABLE dbo.cOrderItems
 	Quantity SMALLINT NOT NULL,
 	Discount REAL NOT NULL,
 	
-	CONSTRAINT PK_OrderItems PRIMARY KEY (OrderID, PruductID),
-	CONSTRAINT FK_cOrderItemes_PruductID FOREIGN KEY (PruductID) REFERENCES  dbo.dProducts (PruductID),
+	CONSTRAINT PK_OrderItems PRIMARY KEY (OrderID, ProductID),
+	CONSTRAINT FK_cOrderItemes_ProductID FOREIGN KEY (ProductID) REFERENCES  dbo.dProducts (ProductID),
 	CONSTRAINT FK_cOrderItemes_CustomerID FOREIGN KEY (CustomerID) REFERENCES  dbo.dCustomers (CustomerID),
 	CONSTRAINT FK_cOrderItemes_EmployeeID FOREIGN KEY (EmployeeID) REFERENCES  dbo.dEmployees (EmployeeID),
 	CONSTRAINT FK_cOrderItemes_ShipperID FOREIGN KEY (ShipVia) REFERENCES  dbo.dShippers (ShipperID),

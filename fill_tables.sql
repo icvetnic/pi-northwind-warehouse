@@ -9,12 +9,15 @@ BRISANJE SVIH PODATAKA IZ SKLADIŠTA
 
 DELETE FROM dbo.cOrders
 DELETE FROM dbo.cOrderItems
-DELETE FROM dbo.dProducts
 DELETE FROM dbo.dCustomers
 DELETE FROM dbo.dShippers
 DELETE FROM dbo.dShips
 DELETE FROM dbo.dPaymentMethod
 DELETE FROM dbo.dEmployees
+DELETE FROM dbo.dProducts
+DELETE FROM dbo.dSuppliers
+DELETE FROM dbo.dDiscounts
+
 
 
 /*
@@ -189,10 +192,16 @@ DECLARE @PaymentMethodID_nepoznato INT =
 	RequiredTimeKey,
 	ShippedDateKey,
 	ShippedTimeKey,
-	Freight
+
+	Freight,
+	TotalPriceWithDiscount,
+	TotalPriceWithoutDiscount,
+	NumOfProducts,
+	NumOfDistinctProducts,
+	Duration -- in seconds
 	)
 	SELECT	
-		OrderID,
+		orders.OrderID,
 		IIF(orders.CustomerID IS NOT NULL, customers.CustomerID, @CustomerID_nepoznato),
 		IIF(orders.EmployeeID IS NOT NULL, employees.EmployeeID, 1000000),
 		IIF(orders.ShipVia IS NOT NULL, shippers.ShipperID, 1000000),
@@ -222,7 +231,17 @@ DECLARE @PaymentMethodID_nepoznato INT =
 		IIF(RequiredDate IS NULL,  @nepoznato_vrijeme, DATEDIFF(ss, 0, CAST(RequiredDate AS TIME(0)))),
 		IIF(ShippedDate IS NULL, 1000000000, CAST(CONVERT(char(8), CAST(ShippedDate AS DATE), 112) AS INT)),
 		IIF(ShippedDate IS NULL,  @nepoznato_vrijeme, DATEDIFF(ss, 0, CAST(ShippedDate AS TIME(0)))),
-		Freight
+
+		Freight,
+		SUM(1.0 * UnitPrice * (1.0 -  Discount)),
+		SUM(UnitPrice),
+		COUNT(ProductID),
+		COUNT(DISTINCT(ProductID)),
+		CASE
+			WHEN OrderDate IS NULL OR ShippedDate IS NULL
+				THEN 0
+			ELSE DATEDIFF(ss, OrderDate, ShippedDate)
+		END
 		FROM NorthWind2015.dbo.Orders AS orders
 			 LEFT JOIN NorthWindCvetnicSP.dbo.dCustomers AS customers
 				ON orders.CustomerID = customers.CustomerIDDB
@@ -232,6 +251,26 @@ DECLARE @PaymentMethodID_nepoznato INT =
 				ON orders.EmployeeID = employees.EmployeeID
 			 LEFT JOIN NorthWindCvetnicSP.dbo.dShippers AS shippers
 				ON orders.ShipVia = shippers.ShipperID
+			 LEFT JOIN NorthWind2015.dbo.OrderItems AS orderItems
+				ON orders.OrderID = orderItems.OrderID
+		GROUP BY orders.OrderID, 
+				orders.CustomerID,
+				customers.CustomerID,
+				orders.EmployeeID,
+				employees.EmployeeID, 
+				orders.PaymentMethod,
+				pmethod.PaymentMethodID,
+				orders.ShipVia, 
+				ShipperID,
+				orders.ShipName,
+				ShipAddress,
+				orders.ShipCityId,
+				orders.OrderDate,
+				orders.RequiredDate,
+				orders.ShippedDate,
+				orders.Freight
+				
+
 GO
 
 
@@ -242,20 +281,32 @@ PUNJENJE DIMENZIJSKIH TABLICA ZA cOrderItems
 */
 INSERT INTO NorthWindCvetnicSP.dbo.dProducts
 	(
-	PruductID,
+	ProductID,
 	ProductName,
+	CountryOfOrigin,
+	QuantityPerUnit,
+	UnitPrice,
+	UnitsInStock,
 	CategoryID,
 	CategoryName
 	)
 	SELECT 
 		ProductID,
 		ProductName,
+		CountryOfOrigin,
+		QuantityPerUnit,
+		UnitPrice,
+		UnitsInStock,
 		prod.CategoryID,
 		CategoryName
 		FROM NorthWind2015.dbo.Products AS prod
 			 LEFT JOIN
 			 NorthWind2015.dbo.Categories AS cat
 				ON prod.CategoryID = cat.CategoryID
+GO
+
+--specijalni zapis ako Product ne postoji (ProductName postavljamo na 'nepoznato')
+INSERT INTO NorthWindCvetnicSP.dbo.dProducts(ProductID, ProductName) VALUES (1000000, 'nepozanto')
 GO
 
 INSERT INTO NorthWindCvetnicSP.dbo.dSuppliers
@@ -325,7 +376,7 @@ DECLARE @discountID_nepoznato INT =
 	(
 	--primary key
 	OrderID,
-	PruductID,
+	ProductID,
 
 	--dimensions from cOrders
 	CustomerID,
