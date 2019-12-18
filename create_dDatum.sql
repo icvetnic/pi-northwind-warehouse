@@ -1,6 +1,11 @@
 USE NorthWindCvetnicSP
 GO
 
+/*
+DROP TABLE NorthWindCvetnicSP.dbo.dDatum
+GO
+*/
+
 CREATE TABLE	NorthWindCvetnicSP.dbo.dDatum
 	(	sifDatum INT PRIMARY KEY, 
 		datum DATE,
@@ -231,9 +236,8 @@ UPDATE dbo.dDatum
 	WHERE datum BETWEEN '06/14/2018' AND '07/15/2018'
 
 
-INSERT INTO dbo.dDatum (sifDatum, tip)
+INSERT INTO dbo.dDatum
 	VALUES
-		(1000000000,'nepoznat'),
-		(1000000001,'nije se još dogodilo')
-
+		(1000000000, NULL, 'nepoznat', 'nepoznat', '--', '--', '----', '-', '-', 'nepoznato', 'nepoznato', '--', '--', 'nepoznato', 'nepoznato', '--', 'nepoznato'),
+		(1000000001, NULL, 'nije se još dogodilo', 'nepoznat', '--', '--', '----', '-', '-', 'nepoznato', 'nepoznato', '--', '--', 'nepoznato', 'nepoznato', '--', 'nepoznato')
 GO

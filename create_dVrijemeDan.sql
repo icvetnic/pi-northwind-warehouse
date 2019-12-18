@@ -1,6 +1,11 @@
 USE NorthWindCvetnicSP
 GO
 
+/*
+DROP TABLE NorthWindCvetnicSP.dbo.dVrijemeDan
+GO
+*/
+
 CREATE TABLE NorthWindCvetnicSP.dbo.dVrijemeDan
 	(	sifVrijemeDan INT PRIMARY KEY, 
 		tip VARCHAR(20), -- noramalan, nepoznato, nije se još dogodilo ...
@@ -71,8 +76,7 @@ WHILE	((@CurrentTime <= @EndTime) AND (@lastSecond = 0))
 	END
 
 
-INSERT INTO dbo.dVrijemeDan (sifVrijemeDan, tip)
+INSERT INTO dbo.dVrijemeDan (sifVrijemeDan, tip, period)
 	VALUES
-		(DATEDIFF(ss, 0, @EndTime) + 1,'nepoznat'),
-		(DATEDIFF(ss, 0, @EndTime) + 2,'nije se još dogodilo')
-		
+		(DATEDIFF(ss, 0, @EndTime) + 1,'nepoznat', 'nepoznat'),
+		(DATEDIFF(ss, 0, @EndTime) + 2,'nije se još dogodilo', 'nepoznat')

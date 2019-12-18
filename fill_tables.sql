@@ -64,6 +64,20 @@ GO
 INSERT INTO NorthWindCvetnicSP.dbo.dCustomers(CompanyName) VALUES ('nepozanto')
 GO
 
+UPDATE dbo.dCustomers SET CustomerIDDB = 'nepoz' WHERE CustomerIDDB IS NULL
+UPDATE dbo.dCustomers SET CompanyName = 'nepoznato' WHERE CompanyName IS NULL
+UPDATE dbo.dCustomers SET ContactName = 'nepoznato' WHERE ContactName IS NULL
+UPDATE dbo.dCustomers SET ContactTitle = 'nepoznato' WHERE ContactTitle IS NULL
+UPDATE dbo.dCustomers SET Phone = 'nepoznato' WHERE Phone IS NULL
+UPDATE dbo.dCustomers SET Fax = 'nepoznato' WHERE Fax IS NULL
+UPDATE dbo.dCustomers SET Address = 'nepoznato' WHERE Address IS NULL
+UPDATE dbo.dCustomers SET CityID = 0 WHERE CityID IS NULL
+UPDATE dbo.dCustomers SET PostalCode = 'nepoznato' WHERE PostalCode IS NULL
+UPDATE dbo.dCustomers SET CityName = 'nepoznato' WHERE CityName IS NULL
+UPDATE dbo.dCustomers SET Region = 'nepoznato' WHERE Region IS NULL
+UPDATE dbo.dCustomers SET Country = 'nepoznato' WHERE Country IS NULL
+GO
+
 INSERT INTO NorthWindCvetnicSP.dbo.dShippers
 	(
 	ShipperID,
@@ -79,6 +93,9 @@ GO
 
 --specijalni zapis ako Shipper ne postoji (CompanyName postavljamo na 'nepoznato')
 INSERT INTO NorthWindCvetnicSP.dbo.dShippers(ShipperID, CompanyName) VALUES (1000000, 'nepozanto')
+GO
+
+UPDATE dbo.dShippers SET Phone = 'nepoznato' WHERE Phone IS NULL
 GO
 
 INSERT INTO NorthWindCvetnicSP.dbo.dShips
@@ -100,6 +117,10 @@ UPDATE NorthWindCvetnicSP.dbo.dShips
 	SET ShipName = 'nepoznato'
 	WHERE ShipName IS NULL
 
+UPDATE dbo.dShips SET ShipAddress = 'nepoznato' WHERE ShipAddress IS NULL
+UPDATE dbo.dShips SET ShipCityId = 0 WHERE ShipCityId IS NULL
+GO
+
  INSERT INTO NorthWindCvetnicSP.dbo.dPaymentMethod
 	(
 	Description
@@ -109,9 +130,8 @@ UPDATE NorthWindCvetnicSP.dbo.dShips
 			FROM NorthWind2015.dbo.Orders
 GO
 
-UPDATE NorthWindCvetnicSP.dbo.dPaymentMethod
-	SET Description = 'nepoznato'
-	WHERE Description IS NULL
+UPDATE NorthWindCvetnicSP.dbo.dPaymentMethod SET Description = 'nepoznato' WHERE Description IS NULL
+GO
 
  INSERT INTO NorthWindCvetnicSP.dbo.dEmployees
 	(
@@ -147,6 +167,15 @@ GO
 --specijalni zapis ako Emplyee ne postoji (FirstName postavljamo na 'nepoznato')
 INSERT INTO NorthWindCvetnicSP.dbo.dEmployees(EmployeeID, LastName, FirstName) VALUES (1000000, 'nepozanto', 'nepozanto')
 GO
+UPDATE dbo.dEmployees SET LastName = 'nepoznato' WHERE LastName IS NULL
+UPDATE dbo.dEmployees SET FirstName = 'nepoznato' WHERE FirstName IS NULL
+UPDATE dbo.dEmployees SET Title = 'nepoznato' WHERE Title IS NULL
+UPDATE dbo.dEmployees SET TitleOfCourtesy = 'nepoznato' WHERE TitleOfCourtesy IS NULL
+UPDATE dbo.dEmployees SET Address = 'nepoznato' WHERE Address IS NULL
+UPDATE dbo.dEmployees SET HomePhone = 'nepoznato' WHERE HomePhone IS NULL
+UPDATE dbo.dEmployees SET Extension = 'nep' WHERE Extension IS NULL
+UPDATE dbo.dEmployees SET CityId = 0 WHERE CityId IS NULL
+UPDATE dbo.dEmployees SET ReportsTo = 0 WHERE ReportsTo IS NULL
 
 /*
 --------------------------------------------
@@ -183,7 +212,7 @@ DECLARE @PaymentMethodID_nepoznato INT =
 	OrderID,
 	CustomerID,
 	EmployeeID,
-	ShipVia,
+	ShipViaKey,
 	ShipID,
 	PaymentMethodKey,
 	OrderDateKey,
@@ -198,7 +227,9 @@ DECLARE @PaymentMethodID_nepoznato INT =
 	TotalPriceWithoutDiscount,
 	NumOfProducts,
 	NumOfDistinctProducts,
-	Duration -- in seconds
+	Delivered,
+	Duration, -- in seconds
+	DurationDays
 	)
 	SELECT	
 		orders.OrderID,
@@ -211,8 +242,8 @@ DECLARE @PaymentMethodID_nepoznato INT =
 			SELECT TOP 1 ShipID 
 				FROM  NorthWindCvetnicSP.dbo.dShips AS ships
 				WHERE ships.ShipName = orders.ShipName
-					AND (ships.ShipAddress = orders.ShipAddress OR (ships.ShipAddress IS NULL AND orders.ShipAddress IS NULL))
-					AND (ships.ShipCityId = orders.ShipCityId OR (ships.ShipCityId IS NULL AND orders.ShipCityId IS NULL))
+					AND (ships.ShipAddress = orders.ShipAddress OR (ships.ShipAddress = 'nepoznato' AND orders.ShipAddress IS NULL))
+					AND (ships.ShipCityId = orders.ShipCityId OR (ships.ShipCityId = 0 AND orders.ShipCityId IS NULL))
 			),
 			@ShipID_nepoznato
 		)
@@ -233,14 +264,24 @@ DECLARE @PaymentMethodID_nepoznato INT =
 		IIF(ShippedDate IS NULL,  @nepoznato_vrijeme, DATEDIFF(ss, 0, CAST(ShippedDate AS TIME(0)))),
 
 		Freight,
-		SUM(1.0 * UnitPrice * (1.0 -  Discount)),
-		SUM(UnitPrice),
-		COUNT(ProductID),
+		SUM((1.0 * UnitPrice * (1.0 -  Discount)) * Quantity),
+		SUM(UnitPrice * Quantity),
+		SUM(Quantity),
 		COUNT(DISTINCT(ProductID)),
+		CASE
+			WHEN OrderDate IS NULL OR ShippedDate IS NULL
+				THEN 'Ne'
+			ELSE 'Da'
+		END,
 		CASE
 			WHEN OrderDate IS NULL OR ShippedDate IS NULL
 				THEN 0
 			ELSE DATEDIFF(ss, OrderDate, ShippedDate)
+		END,
+		CASE
+			WHEN OrderDate IS NULL OR ShippedDate IS NULL
+				THEN 0
+			ELSE FLOOR(DATEDIFF(ss, OrderDate, ShippedDate) / 86400)
 		END
 		FROM NorthWind2015.dbo.Orders AS orders
 			 LEFT JOIN NorthWindCvetnicSP.dbo.dCustomers AS customers
@@ -309,6 +350,12 @@ GO
 INSERT INTO NorthWindCvetnicSP.dbo.dProducts(ProductID, ProductName) VALUES (1000000, 'nepozanto')
 GO
 
+UPDATE dbo.dProducts SET CountryOfOrigin = 'nepoznato' WHERE CountryOfOrigin IS NULL
+UPDATE dbo.dProducts SET QuantityPerUnit = 'nepoznato' WHERE QuantityPerUnit IS NULL
+UPDATE dbo.dProducts SET CategoryID = 0 WHERE CategoryID IS NULL
+UPDATE dbo.dProducts SET CategoryName = 'nepoznato' WHERE CategoryName IS NULL
+GO
+
 INSERT INTO NorthWindCvetnicSP.dbo.dSuppliers
 	(
 	SupplierID,
@@ -334,6 +381,14 @@ GO
 
 --specijalni zapis ako Supplier ne postoji (CompanyName postavljamo na 'nepoznato')
 INSERT INTO NorthWindCvetnicSP.dbo.dSuppliers (SupplierID, CompanyName) VALUES (1000000, 'nepozanto')
+
+UPDATE dbo.dSuppliers SET ContactName = 'nepoznato' WHERE ContactName IS NULL
+UPDATE dbo.dSuppliers SET ContactTitle = 'nepoznato' WHERE ContactTitle IS NULL
+UPDATE dbo.dSuppliers SET Address = 'nepoznato' WHERE Address IS NULL
+UPDATE dbo.dSuppliers SET CityID = 0 WHERE CityID IS NULL
+UPDATE dbo.dSuppliers SET Phone = 'nepoznato' WHERE Phone IS NULL
+UPDATE dbo.dSuppliers SET Fax = 'nepoznato' WHERE Fax IS NULL
+GO
 
  INSERT INTO NorthWindCvetnicSP.dbo.dDiscounts (DiscountDesc)
 	SELECT DISTINCT	
@@ -381,7 +436,7 @@ DECLARE @discountID_nepoznato INT =
 	--dimensions from cOrders
 	CustomerID,
 	EmployeeID,
-	ShipVia,
+	ShipViaKey,
 	ShipID,
 	PaymentMethodKey,
 	OrderDateKey,
@@ -403,7 +458,7 @@ DECLARE @discountID_nepoznato INT =
 		orderItems.ProductID,
 		CustomerID,
 		EmployeeID,
-		ShipVia,
+		ShipViaKey,
 		ShipID,
 		PaymentMethodKey,
 		OrderDateKey,

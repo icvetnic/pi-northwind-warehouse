@@ -13,3 +13,6 @@ Upute za pokretanje:
 4. Pokretanje zadataka:
    Rješenja zadataka nalaze se u datoteci: zadatci.sql
    Za pokretanje pojedinog upita potrebno je selektirati cijeli upit i pritisnuti F5 
+
+5. Export baze:
+	BACKUP DATABASE NorthWindCvetnicSP TO DISK='C:\tmp\CvetnicIvan2.bak'

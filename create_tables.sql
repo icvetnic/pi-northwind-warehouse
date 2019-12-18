@@ -76,7 +76,7 @@ CREATE TABLE dbo.cOrders
 
 	CustomerID INT,
 	EmployeeID INT,
-	ShipVia INT,
+	ShipViaKey INT,
 	ShipID INT,
 	PaymentMethodKey INT,
 	OrderDateKey INT,
@@ -91,11 +91,13 @@ CREATE TABLE dbo.cOrders
 	TotalPriceWithoutDiscount MONEY,
 	NumOfProducts INT,
 	NumOfDistinctProducts INT,
+	Delivered NVARCHAR(2),
 	Duration INT, -- in seconds
+	DurationDays INT,
 
 	CONSTRAINT FK_cOrders_CustomerID FOREIGN KEY (CustomerID) REFERENCES  dbo.dCustomers (CustomerID),
 	CONSTRAINT FK_cOrders_EmployeeID FOREIGN KEY (EmployeeID) REFERENCES  dbo.dEmployees (EmployeeID),
-	CONSTRAINT FK_cOrders_ShipperID FOREIGN KEY (ShipVia) REFERENCES  dbo.dShippers (ShipperID),
+	CONSTRAINT FK_cOrders_ShipperKey FOREIGN KEY (ShipViaKey) REFERENCES  dbo.dShippers (ShipperID),
 	CONSTRAINT FK_cOrders_ShipID FOREIGN KEY (ShipID) REFERENCES  dbo.dShips (ShipID),
 	CONSTRAINT FK_cOrders_PaymentMethodKey FOREIGN KEY (PaymentMethodKey) REFERENCES  dbo.dPaymentMethod (PaymentMethodID),
 	CONSTRAINT FK_cOrders_OrderDateKey FOREIGN KEY (OrderDateKey) REFERENCES  dbo.dDatum (sifDatum),
@@ -149,7 +151,7 @@ CREATE TABLE dbo.cOrderItems
 	--dimensions from cOrders
 	CustomerID INT,
 	EmployeeID INT,
-	ShipVia INT,
+	ShipViaKey INT,
 	ShipID INT,
 	PaymentMethodKey INT,
 	OrderDateKey INT,
@@ -170,7 +172,7 @@ CREATE TABLE dbo.cOrderItems
 	CONSTRAINT FK_cOrderItemes_ProductID FOREIGN KEY (ProductID) REFERENCES  dbo.dProducts (ProductID),
 	CONSTRAINT FK_cOrderItemes_CustomerID FOREIGN KEY (CustomerID) REFERENCES  dbo.dCustomers (CustomerID),
 	CONSTRAINT FK_cOrderItemes_EmployeeID FOREIGN KEY (EmployeeID) REFERENCES  dbo.dEmployees (EmployeeID),
-	CONSTRAINT FK_cOrderItemes_ShipperID FOREIGN KEY (ShipVia) REFERENCES  dbo.dShippers (ShipperID),
+	CONSTRAINT FK_cOrderItemes_ShipperKey FOREIGN KEY (ShipViaKey) REFERENCES  dbo.dShippers (ShipperID),
 	CONSTRAINT FK_cOrderItemes_ShipID FOREIGN KEY (ShipID) REFERENCES  dbo.dShips (ShipID),
 	CONSTRAINT FK_cOrderItemes_PaymentMethodKey FOREIGN KEY (PaymentMethodKey) REFERENCES  dbo.dPaymentMethod (PaymentMethodID),
 	CONSTRAINT FK_cOrderItemes_OrderDateKey FOREIGN KEY (OrderDateKey) REFERENCES  dbo.dDatum (sifDatum),
